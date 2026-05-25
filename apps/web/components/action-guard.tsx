@@ -21,13 +21,18 @@ interface ActionGuardProps {
  */
 export function ActionGuard({ children, action = "submit", className }: ActionGuardProps) {
   const guard = useActionGuard();
+  const guardedChild = children as React.ReactElement<{
+    className?: string;
+    disabled?: boolean;
+  }>;
+  const childProps = guardedChild.props;
 
   const isBlocked = 
     (action === "simulate" && !guard.canSimulate) ||
     ((action === "submit" || action === "deploy") && !guard.canSubmit);
 
   if (!isBlocked) {
-    return React.cloneElement(children);
+    return React.cloneElement(guardedChild);
   }
 
   const getIcon = () => {
@@ -46,9 +51,9 @@ export function ActionGuard({ children, action = "submit", className }: ActionGu
     <Tooltip>
       <TooltipTrigger asChild>
         <div className={className}>
-          {React.cloneElement(children, {
+          {React.cloneElement(guardedChild, {
             disabled: true,
-            className: `${children.props.className || ""} pointer-events-none opacity-50`,
+            className: `${childProps.className || ""} pointer-events-none opacity-50`,
           })}
         </div>
       </TooltipTrigger>

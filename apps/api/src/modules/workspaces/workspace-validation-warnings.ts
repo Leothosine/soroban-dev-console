@@ -1,14 +1,38 @@
 /**
- * BE-019: Structured validation warnings for workspace import/export API responses.
- * Exposes repair and partial-trust signals so clients don't rely on string parsing.
+ * Helpers for structured import/export validation warnings.
+ *
+ * This module is not yet wired into the controller surface, but keeping it
+ * self-contained lets the API build cleanly while preserving the intended
+ * warning model for future integration.
  */
 
-import { ApiWarning, repairWarning, fallbackWarning } from "@soroban-dev-console/api-contracts";
+export interface ApiWarning {
+  code: string;
+  message: string;
+  details?: Record<string, unknown>;
+  kind: "repair" | "fallback";
+}
 
 export interface WorkspaceValidationResult {
   ok: boolean;
   warnings: ApiWarning[];
   unrecoverable: string[];
+}
+
+function repairWarning(
+  code: string,
+  message: string,
+  details?: Record<string, unknown>,
+): ApiWarning {
+  return { code, message, details, kind: "repair" };
+}
+
+function fallbackWarning(
+  code: string,
+  message: string,
+  details?: Record<string, unknown>,
+): ApiWarning {
+  return { code, message, details, kind: "fallback" };
 }
 
 export function validateImportPayload(raw: unknown): WorkspaceValidationResult {
@@ -27,19 +51,46 @@ export function validateImportPayload(raw: unknown): WorkspaceValidationResult {
   }
 
   if (!payload.selectedNetwork) {
-    warnings.push(repairWarning("MISSING_NETWORK", "selectedNetwork absent; defaulted to testnet", { field: "selectedNetwork" }));
+    warnings.push(
+      repairWarning(
+        "MISSING_NETWORK",
+        "selectedNetwork absent; defaulted to testnet",
+        { field: "selectedNetwork" },
+      ),
+    );
   }
 
   if (!Array.isArray(payload.savedContracts)) {
-    warnings.push(repairWarning("MISSING_CONTRACTS", "savedContracts absent; defaulted to empty array", { field: "savedContracts" }));
+    warnings.push(
+      repairWarning(
+        "MISSING_CONTRACTS",
+        "savedContracts absent; defaulted to empty array",
+        { field: "savedContracts" },
+      ),
+    );
   }
 
   if (!Array.isArray(payload.savedInteractions)) {
-    warnings.push(repairWarning("MISSING_INTERACTIONS", "savedInteractions absent; defaulted to empty array", { field: "savedInteractions" }));
+    warnings.push(
+      repairWarning(
+        "MISSING_INTERACTIONS",
+        "savedInteractions absent; defaulted to empty array",
+        { field: "savedInteractions" },
+      ),
+    );
   }
 
-  if (payload.schemaVersion !== undefined && typeof payload.schemaVersion === "number" && payload.schemaVersion < 2) {
-    warnings.push(fallbackWarning("LEGACY_SCHEMA", "payload uses a legacy schema version; some fields may be missing", { schemaVersion: payload.schemaVersion }));
+  if (
+    typeof payload.schemaVersion === "number" &&
+    payload.schemaVersion < 2
+  ) {
+    warnings.push(
+      fallbackWarning(
+        "LEGACY_SCHEMA",
+        "payload uses a legacy schema version; some fields may be missing",
+        { schemaVersion: payload.schemaVersion },
+      ),
+    );
   }
 
   return { ok: unrecoverable.length === 0, warnings, unrecoverable };
@@ -61,7 +112,13 @@ export function validateExportPayload(raw: unknown): WorkspaceValidationResult {
   }
 
   if (!Array.isArray(payload.artifacts) || payload.artifacts.length === 0) {
-    warnings.push(fallbackWarning("NO_ARTIFACTS", "export contains no artifacts; downstream consumers may be incomplete", { field: "artifacts" }));
+    warnings.push(
+      fallbackWarning(
+        "NO_ARTIFACTS",
+        "export contains no artifacts; downstream consumers may be incomplete",
+        { field: "artifacts" },
+      ),
+    );
   }
 
   return { ok: unrecoverable.length === 0, warnings, unrecoverable };

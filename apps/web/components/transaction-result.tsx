@@ -1,6 +1,6 @@
 "use client";
 
-import { CheckCircle2, XCircle, Clock, AlertCircle, ExternalLink, Copy, FileText } from "lucide-react";
+import { CheckCircle2, XCircle, Clock, ExternalLink, Copy } from "lucide-react";
 import { Button } from "@devconsole/ui";
 import { Badge } from "@devconsole/ui";
 import { Card, CardContent, CardHeader, CardTitle } from "@devconsole/ui";
@@ -54,29 +54,35 @@ export function TransactionResult({
           <h4 className="text-sm font-medium mb-2">Simulation Details</h4>
           <div className="grid grid-cols-2 gap-4 text-sm">
             <div>
-              <span className="text-muted-foreground">Cost:</span>
-              <span className="ml-2 font-mono">{simulation.cost?.toString() || "N/A"}</span>
+              <span className="text-muted-foreground">Result XDR:</span>
+              <span className="ml-2 font-mono">
+                {simulation.resultXdr ? "Available" : "N/A"}
+              </span>
             </div>
             <div>
               <span className="text-muted-foreground">CPU Instructions:</span>
-              <span className="ml-2 font-mono">{simulation.cpuInstructions || "N/A"}</span>
+              <span className="ml-2 font-mono">{simulation.cpuInsns ?? "N/A"}</span>
             </div>
             <div>
               <span className="text-muted-foreground">Memory Bytes:</span>
-              <span className="ml-2 font-mono">{simulation.memoryBytes || "N/A"}</span>
+              <span className="ml-2 font-mono">{simulation.memBytes ?? "N/A"}</span>
             </div>
             <div>
               <span className="text-muted-foreground">Min Resource Fee:</span>
-              <span className="ml-2 font-mono">{simulation.minResourceFee?.toString() || "N/A"}</span>
+              <span className="ml-2 font-mono">
+                {simulation.minResourceFee ?? "N/A"}
+              </span>
             </div>
           </div>
         </div>
 
-        {simulation.events && simulation.events.length > 0 && (
+        {simulation.stateChanges.length > 0 && (
           <div>
-            <h4 className="text-sm font-medium mb-2">Events</h4>
+            <h4 className="text-sm font-medium mb-2">State Changes</h4>
             <div className="max-h-32 overflow-y-auto border rounded-md p-2">
-              <pre className="text-xs">{JSON.stringify(simulation.events, null, 2)}</pre>
+              <pre className="text-xs">
+                {JSON.stringify(simulation.stateChanges, null, 2)}
+              </pre>
             </div>
           </div>
         )}
@@ -88,9 +94,13 @@ export function TransactionResult({
               {simulation.auth.map((auth, index) => (
                 <div key={index} className="mb-1">
                   <Badge variant="outline" className="text-xs">
-                    {auth.type === "public_key" ? "Public Key" : "Contract"}
+                    {auth.kind === "account"
+                      ? "Account"
+                      : auth.kind === "contract"
+                        ? "Contract"
+                        : "Unknown"}
                   </Badge>
-                  <span className="ml-2 font-mono text-xs">{auth.value}</span>
+                  <span className="ml-2 font-mono text-xs">{auth.address}</span>
                 </div>
               ))}
             </div>
@@ -199,7 +209,11 @@ export function TransactionResult({
               </Button>
             </h4>
             <div className="max-h-40 overflow-y-auto border rounded-md p-2">
-              <pre className="text-xs">{result.resultXdr}</pre>
+              <pre className="text-xs">
+                {typeof result.resultXdr === "string"
+                  ? result.resultXdr
+                  : JSON.stringify(result.resultXdr, null, 2)}
+              </pre>
             </div>
           </div>
         )}
@@ -218,7 +232,11 @@ export function TransactionResult({
               </Button>
             </h4>
             <div className="max-h-40 overflow-y-auto border rounded-md p-2">
-              <pre className="text-xs">{result.resultMetaXdr}</pre>
+              <pre className="text-xs">
+                {typeof result.resultMetaXdr === "string"
+                  ? result.resultMetaXdr
+                  : JSON.stringify(result.resultMetaXdr, null, 2)}
+              </pre>
             </div>
           </div>
         )}

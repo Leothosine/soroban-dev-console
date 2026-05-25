@@ -64,7 +64,6 @@ function checkWasmDependencies(
   wasms: WasmEntry[],
 ): DependencyIssue[] {
   const issues: DependencyIssue[] = [];
-  const wasmMap = new Map(wasms.map(w => [w.hash, w]));
 
   // Note: Contract type doesn't have wasmHash property directly
   // This would need to be extended based on actual reference structure
@@ -95,11 +94,9 @@ function checkWasmDependencies(
  */
 function checkBrokenReferences(
   contracts: SerializedWorkspace["contracts"],
-  wasms: WasmEntry[],
+  _wasms: WasmEntry[],
 ): DependencyIssue[] {
   const issues: DependencyIssue[] = [];
-  const contractIds = new Set(contracts.map(c => c.id));
-  const wasmHashes = new Set(wasms.map(w => w.hash));
 
   // Check for contracts that might have incomplete references
   contracts.forEach((contract) => {
@@ -123,7 +120,7 @@ function checkBrokenReferences(
  * Check for incomplete artifacts (partial metadata)
  */
 function checkIncompleteArtifacts(
-  contracts: SerializedWorkspace["contracts"],
+  _contracts: SerializedWorkspace["contracts"],
   wasms: WasmEntry[],
 ): DependencyIssue[] {
   const issues: DependencyIssue[] = [];

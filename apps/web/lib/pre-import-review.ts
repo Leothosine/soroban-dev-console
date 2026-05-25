@@ -1,12 +1,12 @@
 /**
  * FE-059: Pre-import review and selective restore workflow.
- *
- * Provides a preview system for workspace imports so users can see
- * what will be restored, what was repaired, and what may be skipped
- * before any local state is overwritten.
  */
 
-import type { SerializedWorkspace, ValidationResult } from "@/lib/workspace-serializer";
+import {
+  importWorkspace,
+  type SerializedWorkspace,
+  type ValidationResult,
+} from "@/lib/workspace-serializer";
 import type { Contract } from "@/store/useContractStore";
 import type { SavedCall } from "@/store/useSavedCallsStore";
 import type { WorkspaceNote } from "@/store/workspace-schema";
@@ -42,97 +42,105 @@ export interface ImportReviewOptions {
   requireUserConfirmation?: boolean;
 }
 
-/**
- * Generate a preview of what will be imported
- */
 export function generateImportPreview(
   raw: unknown,
-  options: ImportReviewOptions = {}
+  _options: ImportReviewOptions = {},
 ): ImportPreview {
   const { payload, validation } = importWorkspace(raw);
-  
-  const totalContracts = payload.contracts?.length || 0;
-  const totalCalls = payload.savedCalls?.length || 0;
-  const totalNotes = payload.notes?.length || 0;
-
-  // Determine what can be imported vs what will be dropped
-  const importableContracts = totalContracts;
-  const importableCalls = totalCalls;
-  const importableNotes = totalNotes;
 
   return {
     workspace: payload.workspace,
-    contracts: payload.contracts || [],
-    savedCalls: payload.savedCalls || [],
-    notes: payload.notes || [],
+    contracts: payload.contracts,
+    savedCalls: payload.savedCalls,
+    notes: payload.notes,
     validation,
     statistics: {
-      totalContracts,
-      importableContracts,
-      totalCalls,
-      importableCalls,
-      totalNotes,
-      importableNotes,
+      totalContracts: payload.contracts.length,
+      importableContracts: payload.contracts.length,
+      totalCalls: payload.savedCalls.length,
+      importableCalls: payload.savedCalls.length,
+      totalNotes: payload.notes.length,
+      importableNotes: payload.notes.length,
     },
   };
 }
 
-/**
- * Apply user selections to the import preview
- */
+function pickSelectedIds<T extends { id: string }>(
+  entries: T[],
+  shouldRestore: boolean,
+  selectedIds?: string[],
+): T[] {
+  if (!shouldRestore) return [];
+  if (!selectedIds || selectedIds.length === 0) return entries;
+
+  const idSet = new Set(selectedIds);
+  return entries.filter((entry) => idSet.has(entry.id));
+}
+
 export function applyImportSelection(
   preview: ImportPreview,
   selection: ImportSelection,
 ): SerializedWorkspace {
-  const selectedContracts = selection.restoreContracts
-    ? preview.contracts.filter((c) => 
-        selection.selectedContractIds?.includes(c.id) ?? 
-        (options.autoSelectAll ?? true)
-      )
-    : [];
+  const contracts = pickSelectedIds(
+    preview.contracts,
+    selection.restoreContracts,
+    selection.selectedContractIds,
+  );
+  const savedCalls = pickSelectedIds(
+    preview.savedCalls,
+    selection.restoreSavedCalls,
+    selection.selectedCallIds,
+  );
+  const notes = pickSelectedIds(
+    preview.notes,
+    selection.restoreNotes,
+    selection.selectedNoteIds,
+  );
 
-  const selectedCalls = selection.restoreSavedCalls
-    ? preview.savedCalls.filter((c) => 
-        selection.selectedCallIds?.includes(c.id) ?? 
-        (options.autoSelectAll ?? true)
-      )
-    : [];
-
-  const selectedNotes = selection.restoreNotes
-    ? preview.notes.filter((n) => 
-        selection.selectedNoteIds?.includes(n.id) ?? 
-        (options.autoSelectAll ?? true)
-      )
-    : [];
+  if (!selection.restoreWorkspace) {
+    return {
+      version: 2,
+      exportedAt: new Date().toISOString(),
+      workspace: {
+        ...preview.workspace,
+        contractIds: [],
+        savedCallIds: [],
+        artifactRefs: [],
+      },
+      contracts,
+      savedCalls,
+      notes,
+    };
+  }
 
   return {
-    version: preview.workspace.version,
-    exportedAt: preview.workspace.exportedAt,
+    version: 2,
+    exportedAt: new Date().toISOString(),
     workspace: {
       ...preview.workspace,
-      contractIds: selectedContracts.map(c => c.id),
-      savedCallIds: selectedCalls.map(c => c.id),
-      artifactRefs: preview.workspace.artifactRefs || [],
+      contractIds: contracts.map((contract) => contract.id),
+      savedCallIds: savedCalls.map((savedCall) => savedCall.id),
+      artifactRefs: preview.workspace.artifactRefs ?? [],
     },
-    contracts: selectedContracts,
-    savedCalls: selectedCalls,
-    notes: selectedNotes,
+    contracts,
+    savedCalls,
+    notes: notes.map((note) => ({
+      ...note,
+      workspaceId: preview.workspace.id,
+    })),
   };
 }
 
-/**
- * Format validation issues for display
- */
 export function formatValidationSummary(validation: ValidationResult): {
   hasIssues: boolean;
   errorCount: number;
   warningCount: number;
   summary: string;
   issues: Array<{
-    type: 'error' | 'warning';
+    type: "error" | "warning";
     message: string;
-  count?: number;
-  items?: string[];
+    count?: number;
+    items?: string[];
   }>;
 } {
   const errorCount = validation.errors.length;
@@ -140,32 +148,33 @@ export function formatValidationSummary(validation: ValidationResult): {
   const hasIssues = errorCount > 0 || warningCount > 0;
 
   const issues = [
-    ...validation.errors.map((error, index) => ({
-      type: 'error' as const,
+    ...validation.errors.map((error) => ({
+      type: "error" as const,
       message: error,
       count: 1,
     })),
-    ...validation.warnings.length > 0 ? [{
-      type: 'warning' as const,
-      message: validation.warnings.join('; '),
-      count: validation.warnings.length,
-      items: validation.warnings,
-    }] : [],
+    ...validation.warnings.map((warning) => ({
+      type: "warning" as const,
+      message: warning,
+      count: 1,
+    })),
   ];
 
-  let summary = '';
+  const summaryParts: string[] = [];
   if (errorCount > 0) {
-    summary = `${errorCount} error${errorCount !== 1 ? 's' : ''}`;
+    summaryParts.push(`${errorCount} error${errorCount === 1 ? "" : "s"}`);
   }
   if (warningCount > 0) {
-    summary += (summary ? ', ' : '') + `${warningCount} warning${warningCount !== 1 ? 's' : ''}`;
+    summaryParts.push(
+      `${warningCount} warning${warningCount === 1 ? "" : "s"}`,
+    );
   }
 
   return {
     hasIssues,
     errorCount,
     warningCount,
-    summary: summary || 'No issues detected',
+    summary: summaryParts.join(", ") || "No issues detected",
     issues,
   };
 }

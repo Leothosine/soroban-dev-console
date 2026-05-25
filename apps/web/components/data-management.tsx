@@ -33,6 +33,7 @@ import {
   RefreshCw,
   Clock,
   ShieldOff,
+  XCircle,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useWorkspaceStore } from "@/store/useWorkspaceStore";
@@ -43,7 +44,10 @@ import {
   importWorkspace,
 } from "@/lib/workspace-serializer";
 import { PreImportReview } from "@/components/pre-import-review";
-import { applyImportSelection } from "@/lib/pre-import-review";
+import {
+  applyImportSelection,
+  type ImportSelection,
+} from "@/lib/pre-import-review";
 import { sharesApi } from "@/lib/api/workspaces";
 import {
   scanAllStores,
@@ -60,6 +64,7 @@ import type { ShareSummary } from "@devconsole/api-contracts";
 import { useResultBundlesStore } from "@/store/useResultBundlesStore";
 import { exportAllResultBundles, exportResultBundle } from "@/lib/result-bundles";
 import { useWasmStore } from "@/store/useWasmStore";
+import { useWorkspaceNotesStore } from "@/store/useWorkspaceNotesStore";
 
 // The keys defined in your Zustand 'persist' middleware options
 const STORAGE_KEYS = {
@@ -81,6 +86,7 @@ function ShareManagement({ workspaceCloudId }: { workspaceCloudId: string | null
   const { getActiveWorkspace, syncToCloud, cloudId } = useWorkspaceStore();
   const { contracts } = useContractStore();
   const { savedCalls } = useSavedCallsStore();
+  const { getNotesForWorkspace } = useWorkspaceNotesStore();
 
   const loadShares = useCallback(async (wsId: string) => {
     setIsLoading(true);
@@ -122,7 +128,12 @@ function ShareManagement({ workspaceCloudId }: { workspaceCloudId: string | null
         if (!wsCloudId) throw new Error("Failed to sync workspace to cloud");
       }
 
-      const snapshot = serializeWorkspace(workspace, contracts, savedCalls);
+      const snapshot = serializeWorkspace(
+        workspace,
+        contracts,
+        savedCalls,
+        getNotesForWorkspace(workspace.id),
+      );
       const expiresInSeconds = expiryHours ? parseInt(expiryHours) * 3600 : undefined;
 
       const link = await sharesApi.create({
@@ -328,6 +339,7 @@ export function DataManagement() {
   const { getActiveWorkspace, cloudId } = useWorkspaceStore();
   const { contracts } = useContractStore();
   const { savedCalls } = useSavedCallsStore();
+  const { getNotesForWorkspace } = useWorkspaceNotesStore();
   const { bundles, removeBundle, clearBundles } = useResultBundlesStore();
   const { wasms } = useWasmStore();
   const { getActiveNetworkConfig } = useNetworkStore();
@@ -339,7 +351,12 @@ export function DataManagement() {
 
       if (workspace) {
         // FE-012: versioned workspace export
-        const payload = serializeWorkspace(workspace, contracts, savedCalls);
+        const payload = serializeWorkspace(
+          workspace,
+          contracts,
+          savedCalls,
+          getNotesForWorkspace(workspace.id),
+        );
         const blob = new Blob([JSON.stringify(payload, null, 2)], {
           type: "application/json",
         });
@@ -391,7 +408,7 @@ export function DataManagement() {
     setShowPreImportReview(true);
   };
 
-  const handlePreImportConfirm = (selection: any) => {
+  const handlePreImportConfirm = (selection: ImportSelection) => {
     if (!importFile) return;
 
     setIsImporting(true);
@@ -412,12 +429,24 @@ export function DataManagement() {
           }
 
           // Apply user selection
-          const finalPayload = applyImportSelection({
-            workspace: payload,
-            contracts: payload.contracts,
-            savedCalls: payload.savedCalls,
-            notes: payload.notes || [],
-          }, selection);
+          const finalPayload = applyImportSelection(
+            {
+              workspace: payload.workspace,
+              contracts: payload.contracts,
+              savedCalls: payload.savedCalls,
+              notes: payload.notes,
+              validation,
+              statistics: {
+                totalContracts: payload.contracts.length,
+                importableContracts: payload.contracts.length,
+                totalCalls: payload.savedCalls.length,
+                importableCalls: payload.savedCalls.length,
+                totalNotes: payload.notes.length,
+                importableNotes: payload.notes.length,
+              },
+            },
+            selection,
+          );
 
           const upsertById = <T extends { id: string }>(nextItems: T[], existingItems: T[]) => [
             ...nextItems,
@@ -508,7 +537,7 @@ export function DataManagement() {
       }
     };
 
-    reader.readAsText(file);
+    reader.readAsText(importFile);
   };
 
   // FE-037: scan all stores for corruption and offer salvage export
@@ -682,24 +711,35 @@ export function DataManagement() {
           </div>
         </div>
       )}
-          </div>
-
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Package className="h-5 w-5" />
+            Diagnostics &amp; Recovery
+          </CardTitle>
+          <CardDescription>
+            Review import safety, export support artifacts, and recover from corrupted
+            local state without losing the whole workspace.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
           <div className="flex items-start gap-3 rounded-md bg-yellow-50 p-3 text-sm text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-200">
             <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
             <p>
-              <strong>Warning:</strong> Importing data will{" "}
-              <strong>overwrite</strong> your current contracts, saved calls, and
-              custom networks. This action cannot be undone.
+              <strong>Warning:</strong> importing workspace data can replace your
+              current local state. Use the preview flow first and keep an export if
+              you may need to roll back.
             </p>
           </div>
-          {/* FE-039: Support Bundle */}
+
           <div className="flex flex-col gap-2 rounded-md border p-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-start gap-2">
               <Package className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
               <div>
                 <p className="text-sm font-medium">Support Bundle</p>
                 <p className="text-xs text-muted-foreground">
-                  Download a redacted snapshot of workspace, calls, and environment for debugging.
+                  Download a redacted snapshot of workspace, calls, and environment
+                  for debugging and support.
                 </p>
               </div>
             </div>
@@ -719,15 +759,14 @@ export function DataManagement() {
             </Button>
           </div>
 
-          {/* FE-055: Result bundle export */}
-          <div className="rounded-md border p-3 space-y-2">
+          <div className="rounded-md border p-3 space-y-3">
             <div className="flex items-start gap-2">
               <Package className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
               <div className="flex-1">
                 <p className="text-sm font-medium">Result Bundles</p>
                 <p className="text-xs text-muted-foreground">
-                  Export simulation and transaction outcomes from single-call,
-                  batch, and deployment workflows.
+                  Export simulation, transaction, and deployment outcomes from the
+                  current browser session.
                 </p>
               </div>
             </div>
@@ -822,13 +861,13 @@ export function DataManagement() {
                           title: `Deploy outcome · ${entry.name}`,
                           createdAt: entry.deployedAt ?? Date.now(),
                           networkId: entry.network,
+                          workspaceId: entry.workspaceId,
                           contractId: entry.deployedContractId,
                           payload: {
                             wasmHash: entry.hash,
                             version: entry.version,
                             installedAt: entry.installedAt,
                             deployedAt: entry.deployedAt,
-                            workspaceId: entry.workspaceId,
                             provenance: entry.provenance,
                           },
                         };
@@ -845,14 +884,14 @@ export function DataManagement() {
             )}
           </div>
 
-          {/* FE-037: Recovery Tooling */}
           <div className="rounded-md border p-3 space-y-2">
             <div className="flex items-start gap-2">
               <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0 text-yellow-500" />
               <div className="flex-1">
                 <p className="text-sm font-medium">State Recovery</p>
                 <p className="text-xs text-muted-foreground">
-                  Scan local stores for corruption. Export salvageable data before resetting.
+                  Scan local stores for corruption and export salvageable data
+                  before resetting anything.
                 </p>
               </div>
             </div>
@@ -878,7 +917,7 @@ export function DataManagement() {
               )}
             </div>
             {corruptionSummary && (
-              <pre className="mt-1 rounded bg-red-50 p-2 text-xs text-red-700 dark:bg-red-900/20 dark:text-red-300 whitespace-pre-wrap">
+              <pre className="mt-1 whitespace-pre-wrap rounded bg-red-50 p-2 text-xs text-red-700 dark:bg-red-900/20 dark:text-red-300">
                 {corruptionSummary}
               </pre>
             )}

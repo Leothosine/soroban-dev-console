@@ -8,7 +8,7 @@
  * - Fork CTA wired to FE-027 flow
  */
 
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { sharesApi } from "@/lib/api/workspaces";
 import { ShareDetail } from "@devconsole/api-contracts";
@@ -65,6 +65,8 @@ export default function SharedWorkspacePage() {
   const { token } = useParams<{ token: string }>();
   const router = useRouter();
   const [state, setState] = useState<PageState>({ status: "loading" });
+  const { specs } = useAbiStore();
+  const { wasms } = useWasmStore();
 
   useEffect(() => {
     if (!token) return;
@@ -128,10 +130,6 @@ export default function SharedWorkspacePage() {
   const { payload, link } = state;
   const isExpired = link.expiresAt && new Date(link.expiresAt) < new Date();
 
-  // Get store data for dependency diagnostics
-  const { specs } = useAbiStore();
-  const { wasms } = useWasmStore();
-
   return (
     <div className="container mx-auto max-w-3xl space-y-6 p-6">
       {/* Read-only banner */}
@@ -158,7 +156,9 @@ export default function SharedWorkspacePage() {
       {/* Workspace header */}
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">{payload.workspace.name}</h1>
+          <h1 className="text-2xl font-bold tracking-tight">
+            {payload.workspace.name}
+          </h1>
           <p className="text-sm text-muted-foreground">
             Network:{" "}
             <Badge variant="secondary">{payload.workspace.selectedNetwork}</Badge>

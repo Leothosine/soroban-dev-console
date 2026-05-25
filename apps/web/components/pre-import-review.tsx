@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Card,
   CardContent,
@@ -20,19 +20,14 @@ import {
   Eye,
   EyeOff,
   GitFork,
-  Package,
-  Trash2,
-  Info,
 } from "lucide-react";
 import {
   generateImportPreview,
-  applyImportSelection,
   formatValidationSummary,
   type ImportPreview,
   type ImportSelection,
   type ImportReviewOptions,
 } from "@/lib/pre-import-review";
-import type { SerializedWorkspace } from "@/lib/workspace-serializer";
 
 interface PreImportReviewProps {
   raw: unknown;
@@ -51,8 +46,7 @@ export function PreImportReview({ raw, onConfirm, onCancel, options = {} }: PreI
   });
   const [isLoading, setIsLoading] = useState(false);
 
-  // Generate preview when raw data changes
-  useState(() => {
+  useEffect(() => {
     if (raw) {
       setIsLoading(true);
       try {

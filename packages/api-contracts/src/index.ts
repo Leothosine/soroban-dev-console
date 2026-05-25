@@ -2,7 +2,7 @@
  * Shared API contracts and types for Soroban Dev Console
  */
 
-export * from "./runtime-defaults.js";
+export * from "./runtime-defaults";
 
 // ── Runtime Config ────────────────────────────────────────────────────────
 

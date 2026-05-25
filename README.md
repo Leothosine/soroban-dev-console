@@ -13,7 +13,7 @@ Soroban DevConsole provides an intuitive web interface for Soroban smart contrac
 ```
 ┌─────────────────┐         ┌──────────────────┐         ┌─────────────────┐
 │   Web Frontend  │◄───────►│   API Backend    │◄───────►│  Soroban RPC    │
-│   (Next.js 15)  │         │   (NestJS)       │         │  Endpoints      │
+│   (Next.js 16)  │         │   (NestJS)       │         │  Endpoints      │
 └─────────────────┘         └──────────────────┘         └─────────────────┘
           │                          │
           │                          │
@@ -35,7 +35,7 @@ Soroban DevConsole provides an intuitive web interface for Soroban smart contrac
 ## Tech Stack
 
 ### Frontend (apps/web)
-- **Framework**: Next.js 15 (App Router)
+- **Framework**: Next.js 16 (App Router)
 - **Language**: TypeScript
 - **Styling**: Tailwind CSS, Shadcn/ui components
 - **State Management**: Zustand with schema versioning
@@ -128,10 +128,12 @@ soroban-dev-console/
 
 5. **Start development servers**:
    ```bash
-   npm run dev
+   npm run dev -w web
+   npm run dev -w api
    ```
-   
-   This starts both the API (port 4000) and web app (port 3000) concurrently.
+
+   The root `npm run dev` command starts the web app only. Run the API in a
+   second terminal when you need the full stack locally.
 
 6. **Open the application**:
    Navigate to [http://localhost:3000](http://localhost:3000)
@@ -141,14 +143,14 @@ soroban-dev-console/
 ### Running Tests
 
 ```bash
-# Run all tests
-npm test
+# Run web tests
+npm run test:run -w web
 
-# Run API tests only
-npm run test --filter=api
+# Run API tests
+npm run test -w api
 
-# Run web tests only
-npm run test --filter=web
+# Run contract tests
+cargo test --manifest-path contracts/Cargo.toml
 ```
 
 ### Code Quality
@@ -159,7 +161,7 @@ npm run lint
 npm run format
 
 # Type checking
-npm run type-check
+npm run typecheck
 ```
 
 ### Database Migrations
@@ -197,7 +199,7 @@ npx prisma migrate reset
 
 DEVOPS-025: The project uses a centralized source of truth for all runtime ports and local URLs to prevent drift.
 
-- **Canonical Source**: [packages/api-contracts/src/runtime-defaults.ts](file:///Users/mustang/Desktop/soroban-dev-console/packages/api-contracts/src/runtime-defaults.ts)
+- **Canonical Source**: `packages/api-contracts/src/runtime-defaults.ts`
 - **Validation**: Run `npm run check-drift` to verify that all documentation and `.env.example` files are aligned with these defaults. Run `npm run check-integrity` to verify lockfile and workspace dependency consistency.
 
 | Service | Default Port | Default Local URL |
@@ -234,9 +236,9 @@ We welcome contributions! Please see [CONTRIBUTING.md](./CONTRIBUTING.md) for gu
 ### Quick Start for Contributors
 
 1. Fork the repository
-2. Create a feature branch: `git checkout -b feature/my-feature`
+2. Create a feature branch: `git checkout -b feat/my-feature`
 3. Make your changes
-4. Run tests: `npm test`
+4. Run the relevant validation commands for your area
 5. Commit with descriptive messages
 6. Push and open a Pull Request
 

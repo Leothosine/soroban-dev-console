@@ -10,7 +10,7 @@ import { DEFAULT_LOCAL_API_URL } from "@devconsole/api-contracts";
 import {
   NormalizedTransactionResult,
   NormalizedSimulationPayload,
-  ApiResponse,
+  ApiEnvelope,
 } from "@devconsole/api-contracts";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? DEFAULT_LOCAL_API_URL;
@@ -48,7 +48,7 @@ export async function simulateTransaction(
     );
   }
 
-  const result = (await response.json()) as ApiResponse<NormalizedSimulationPayload>;
+  const result = (await response.json()) as ApiEnvelope<NormalizedSimulationPayload>;
 
   if (!result.success) {
     throw new TransactionApiError(
@@ -83,7 +83,7 @@ export async function sendTransaction(
     );
   }
 
-  const result = (await response.json()) as ApiResponse<NormalizedTransactionResult>;
+  const result = (await response.json()) as ApiEnvelope<NormalizedTransactionResult>;
 
   if (!result.success) {
     throw new TransactionApiError(
@@ -118,7 +118,7 @@ export async function getTransactionStatus(
     );
   }
 
-  const result = (await response.json()) as ApiResponse<NormalizedTransactionResult>;
+  const result = (await response.json()) as ApiEnvelope<NormalizedTransactionResult>;
 
   if (!result.success) {
     throw new TransactionApiError(

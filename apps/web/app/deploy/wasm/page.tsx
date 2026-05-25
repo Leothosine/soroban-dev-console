@@ -238,7 +238,7 @@ function DeployPipelinePanel() {
 
 export default function WasmRegistryPage() {
   const pathname = usePathname();
-  const { isConnected, address } = useWallet();
+  const { isConnected, address, isSandboxMode } = useWallet();
   const { getActiveNetworkConfig } = useNetworkStore();
   const { wasms, addWasm, removeWasm, associateContract, addProvenanceNode, advancePipeline, resetPipeline } = useWasmStore();
   const { activeWorkspaceId, attachArtifact } = useWorkspaceStore();

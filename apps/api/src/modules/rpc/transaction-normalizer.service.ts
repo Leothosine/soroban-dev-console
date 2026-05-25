@@ -8,6 +8,34 @@ import {
 
 @Injectable()
 export class TransactionNormalizerService {
+  private toBase64Xdr(value: unknown): string | undefined {
+    if (typeof value === "string") return value;
+    if (
+      value &&
+      typeof value === "object" &&
+      "toXDR" in value &&
+      typeof value.toXDR === "function"
+    ) {
+      return value.toXDR("base64");
+    }
+    return undefined;
+  }
+
+  private toIsoTimestamp(value: unknown): string | undefined {
+    if (typeof value === "number") {
+      return new Date(value).toISOString();
+    }
+
+    if (value && typeof value === "object") {
+      const candidate = value as { toISOString?: () => string };
+      if (typeof candidate.toISOString === "function") {
+        return candidate.toISOString();
+      }
+    }
+
+    return undefined;
+  }
+
   /**
    * Normalize simulation transaction responses to a stable shape
    */
@@ -44,10 +72,15 @@ export class TransactionNormalizerService {
   normalizeSendTransaction(
     response: SorobanRpc.Api.SendTransactionResponse,
   ): NormalizedTransactionResult {
+    const hash = "hash" in response ? response.hash : undefined;
+
     return {
       status: this.mapSendTransactionStatus(response.status),
-      hash: response.hash,
-      error: response.error,
+      hash,
+      error:
+        response.status === "ERROR"
+          ? "Transaction submission failed"
+          : undefined,
     };
   }
 
@@ -58,16 +91,29 @@ export class TransactionNormalizerService {
     response: SorobanRpc.Api.GetTransactionResponse,
   ): NormalizedTransactionResult {
     const status = this.mapGetTransactionStatus(response.status);
-    
-    return {
+
+    const normalized: NormalizedTransactionResult = {
       status,
-      hash: response.hash,
-      ledger: response.ledger,
-      createdAt: response.createdAt?.toISOString(),
-      resultXdr: response.resultXdr,
-      resultMetaXdr: response.resultMetaXdr,
       error: status === "failed" ? this.extractTransactionError(response) : undefined,
     };
+
+    if ("hash" in response && typeof response.hash === "string") {
+      normalized.hash = response.hash;
+    }
+    if ("ledger" in response && typeof response.ledger === "number") {
+      normalized.ledger = response.ledger;
+    }
+    if ("createdAt" in response) {
+      normalized.createdAt = this.toIsoTimestamp(response.createdAt);
+    }
+    if ("resultXdr" in response) {
+      normalized.resultXdr = this.toBase64Xdr(response.resultXdr);
+    }
+    if ("resultMetaXdr" in response) {
+      normalized.resultMetaXdr = this.toBase64Xdr(response.resultMetaXdr);
+    }
+
+    return normalized;
   }
 
   private normalizeAuth(
@@ -161,32 +207,15 @@ export class TransactionNormalizerService {
   private mapGetTransactionStatus(
     status: SorobanRpc.Api.GetTransactionStatus,
   ): NormalizedTransactionStatus {
-    switch (status) {
-      case "SUCCESS":
-        return "success";
-      case "FAILED":
-        return "failed";
-      case "NOT_FOUND":
-      case "PENDING":
-        return "pending";
-      default:
-        return "failed";
-    }
+    const rawStatus = String(status);
+    if (rawStatus === "SUCCESS") return "success";
+    if (rawStatus === "FAILED") return "failed";
+    return "pending";
   }
 
   private extractTransactionError(
-    response: SorobanRpc.Api.GetTransactionResponse,
+    _response: SorobanRpc.Api.GetTransactionResponse,
   ): string | undefined {
-    if (response.resultXdr) {
-      try {
-        const result = SorobanRpc.xdr.TransactionResult.fromXDR(response.resultXdr, "base64");
-        if (result.result().switch().name === "txFailed") {
-          return "Transaction execution failed";
-        }
-      } catch {
-        // Fall through to generic error
-      }
-    }
     return "Transaction failed";
   }
 }

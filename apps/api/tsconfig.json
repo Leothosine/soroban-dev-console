@@ -19,6 +19,8 @@
     "src/controllers/**/*.ts",
     "src/routes/**/*.ts",
     "src/middleware/**/*.ts",
-    "src/services/**/*.ts"
+    "src/services/**/*.ts",
+    "src/modules/**/*.test.ts",
+    "src/modules/**/*.spec.ts"
   ]
 }

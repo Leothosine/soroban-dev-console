@@ -11,6 +11,7 @@ import type { NetworkConfig } from "@/store/useNetworkStore";
 import { useWorkspaceStore } from "@/store/useWorkspaceStore";
 import { useWasmStore } from "@/store/useWasmStore";
 import { useContractStore } from "@/store/useContractStore";
+import type { WorkspaceArtifactRef } from "@/store/workspace-schema";
 
 export type ReconciliationContext = "deploy" | "batch" | "call" | "upload";
 
@@ -36,7 +37,7 @@ export interface ReconciliationPayload {
   workspaceId?: string;
   wasmHash?: string;
   contractId?: string;
-  artifactRefs?: Array<{ kind: string; id: string; contractId?: string; relationship?: string }>;
+  artifactRefs?: WorkspaceArtifactRef[];
   customRules?: Partial<ReconciliationRules>;
 }
 
@@ -144,7 +145,7 @@ function resetDeployPipeline(): void {
  */
 function associateArtifacts(
   workspaceId: string,
-  artifactRefs: Array<{ kind: string; id: string; contractId?: string; relationship?: string }>
+  artifactRefs: WorkspaceArtifactRef[],
 ): void {
   const { attachArtifact } = useWorkspaceStore.getState();
   

@@ -286,8 +286,10 @@ export default function ContractDetailPage() {
                         onChange={handleInterfaceUpload}
                         aria-describedby="upload-help-alt"
                       />
-                      <p id="upload-help-alt"
-                      <p id="upload-help" className="text-xs text-muted-foreground">
+                      <p
+                        id="upload-help-alt"
+                        className="text-xs text-muted-foreground"
+                      >
                         Upload a local ABI JSON or WASM to drive the interaction form.
                       </p>
                     </div>

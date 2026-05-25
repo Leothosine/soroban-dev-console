@@ -41,7 +41,8 @@ Thank you for considering contributing to Soroban DevConsole! This project aims 
 
 5. **Start development servers**:
    ```bash
-   npm run dev
+   npm run dev -w web
+   npm run dev -w api
    ```
 
 6. Open [http://localhost:3000](http://localhost:3000) to view the application.
@@ -51,14 +52,14 @@ Thank you for considering contributing to Soroban DevConsole! This project aims 
 ### Branch Naming
 
 Use descriptive branch names following this pattern:
-- `feature/short-description` - New features
+- `feat/short-description` - New features
 - `fix/short-description` - Bug fixes
 - `docs/short-description` - Documentation updates
 - `refactor/short-description` - Code refactoring
 - `test/short-description` - Test additions/updates
 
 Examples:
-- `feature/workspace-export`
+- `feat/workspace-export`
 - `fix/rpc-caching-bug`
 - `docs/update-readme`
 
@@ -107,15 +108,18 @@ npm run format
 Write tests for new features and bug fixes:
 
 ```bash
-# Run all tests
-npm test
+# Run web tests
+npm run test:run -w web
 
-# Run tests for specific app
-npm run test --filter=api
-npm run test --filter=web
+# Run API tests
+npm run test -w api
 
-# Run tests in watch mode
-npm run test:watch
+# Run contract tests
+cargo test --manifest-path contracts/Cargo.toml
+
+# Run drift and integrity checks
+node --experimental-strip-types scripts/check-runtime-drift.ts
+node --experimental-strip-types scripts/check-dependency-integrity.ts
 ```
 
 ## Project Structure
@@ -150,23 +154,24 @@ soroban-dev-console/
 
 1. **Create a branch** from `main`:
    ```bash
-   git checkout -b feature/my-feature
+   git checkout -b feat/my-feature
    ```
 
 2. **Make your changes** following the code style guidelines
 
 3. **Run tests and linting**:
    ```bash
-   npm test
+   npm run test:run -w web
+   npm run test -w api
    npm run lint
-   npm run format
+   npm run typecheck
    ```
 
 4. **Commit your changes** with a descriptive message
 
 5. **Push to your fork**:
    ```bash
-   git push origin feature/my-feature
+   git push origin feat/my-feature
    ```
 
 6. **Open a Pull Request** against the `main` branch:
@@ -174,6 +179,9 @@ soroban-dev-console/
    - Include a clear description of changes
    - Add screenshots for UI changes
    - Note any breaking changes
+
+Direct pushes to `main` may be blocked by branch protection. If that happens,
+push your branch and open a PR instead of trying to bypass the protection.
 
 7. **Address review feedback** promptly
 
