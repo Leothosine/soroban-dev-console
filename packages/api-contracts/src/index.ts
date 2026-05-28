@@ -168,6 +168,68 @@ export interface CreateSharePayload {
   expiresInSeconds?: number;
 }
 
+// ── Contributor Verification (BE-206) ────────────────────────────────────────
+
+export type VerificationStatus = "pending" | "verified" | "failed" | "expired";
+
+export interface VerificationEventPayload {
+  /** Idempotency key — provider-assigned event ID */
+  eventId: string;
+  contributorId: string;
+  provider: string;
+  status: VerificationStatus;
+  verifiedAt?: string | null;
+  metadata?: Record<string, unknown>;
+}
+
+export interface VerificationEventResult {
+  id: string;
+  contributorId: string;
+  provider: string;
+  status: VerificationStatus;
+  eventId: string;
+  processedAt: string;
+}
+
+// ── Maintainer Review Context (BE-209) ───────────────────────────────────────
+
+export type ReviewDecision = "approved" | "changes_requested" | "commented" | "dismissed";
+
+export interface ReviewContextPayload {
+  pullRequestId: string;
+  repositoryId: string;
+  reviewerId: string;
+  decision: ReviewDecision;
+  commentCount: number;
+  requestedChangesCount: number;
+  mergeStatus: "open" | "merged" | "closed";
+  reviewedAt: string;
+  metadata?: Record<string, unknown>;
+}
+
+export interface ReviewContextSummary {
+  id: string;
+  pullRequestId: string;
+  repositoryId: string;
+  reviewerId: string;
+  decision: ReviewDecision;
+  commentCount: number;
+  requestedChangesCount: number;
+  mergeStatus: string;
+  reviewedAt: string;
+  createdAt: string;
+}
+
+export interface AppealContext {
+  pullRequestId: string;
+  repositoryId: string;
+  reviews: ReviewContextSummary[];
+  totalComments: number;
+  totalRequestedChanges: number;
+  approvalCount: number;
+  latestMergeStatus: string;
+}
+
 // ── Transaction Status ─────────────────────────────────────────────────────────
 
 export type NormalizedTransactionStatus = "pending" | "success" | "failed";
@@ -200,4 +262,74 @@ export interface NormalizedSimulationPayload {
   stateChangesCount: number;
   cpuInsns?: number;
   memBytes?: number;
+}
+
+// ── Wave Program (BE-207, BE-208, BE-211, BE-213) ─────────────────────────────
+
+export type WaveAction = "claim" | "appeal" | "reward";
+
+export type AppealStatus = "open" | "under_review" | "resolved" | "rejected";
+
+export interface AppealCaseSummary {
+  id: string;
+  issueRef: string;
+  status: AppealStatus;
+  reason: string;
+  createdAt: Date | string;
+  updatedAt: Date | string;
+  resolvedAt: Date | string | null;
+  resolution: string | null;
+}
+
+export interface CreateAppealPayload {
+  issueRef: string;
+  reason: string;
+  evidenceJson?: unknown;
+}
+
+export interface TransitionAppealPayload {
+  status: AppealStatus;
+  resolution?: string;
+}
+
+export type RiskSeverity = "low" | "medium" | "high" | "critical";
+
+export type ModerationReasonCode =
+  | "CLEAN"
+  | "VELOCITY_ANOMALY"
+  | "DUPLICATE_SUBMISSION"
+  | "PATTERN_MATCH"
+  | "MANUAL_FLAG";
+
+export interface RiskScorePayload {
+  issueRef: string;
+  recentSubmissionCount?: number;
+  duplicateDetected?: boolean;
+  patternMatched?: boolean;
+  manualFlag?: boolean;
+}
+
+export interface RiskScoreResponse {
+  severity: RiskSeverity;
+  reasonCode: ModerationReasonCode;
+}
+
+export interface ReviewWindowPolicy {
+  maintainerReviewWindowHours: number;
+  appealDeadlineHours: number;
+  appealMaxOpenHours: number;
+}
+
+export interface ReviewSchedule {
+  submittedAt: string;
+  maintainerReviewDeadline: string;
+  automatedEvalEligibleAt: string;
+  appealDeadline: string;
+  policy: ReviewWindowPolicy;
+}
+
+export interface AppealTimingResult {
+  withinWindow: boolean;
+  reason?: string;
+  appealDeadline: string;
 }

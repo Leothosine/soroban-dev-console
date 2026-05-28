@@ -178,6 +178,24 @@ When the DevOps job runs in CI, a step summary is written to the GitHub Actions 
 ### Skipping the DevOps gate
 
 The DevOps job only runs when relevant files change (scripts, `runtime-defaults.ts`, docs, env examples, or lockfiles). If none of those files are touched, the job is skipped and the Required Checks gate treats a skip as a pass.
+## Branch Protection and Required Checks
+
+The `main` branch is fully protected. **Direct pushes are rejected** — all changes must go through a pull request.
+
+A PR cannot be merged until all applicable CI jobs pass:
+
+| Job | Runs when |
+|-----|-----------|
+| `Web` | `apps/web/**` or `packages/ui/**` changed |
+| `API` | `apps/api/**` or `packages/api-contracts/**` changed |
+| `Package Validation` | `packages/**` changed |
+| `Contracts` | `contracts/**` changed |
+| `DevOps` | `scripts/**`, `.env.example`, `README.md`, or `docs/architecture.md` changed |
+| `E2E Tests` | `apps/web/e2e/**` changed or when `Web` runs |
+
+At least **1 approving review** is required. Reviews are dismissed when new commits are pushed.
+
+See [docs/branch-protection.md](./docs/branch-protection.md) for the full reference including the release process and hotfix workflow.
 
 ## Pull Request Process
 
@@ -209,10 +227,9 @@ The DevOps job only runs when relevant files change (scripts, `runtime-defaults.
    - Add screenshots for UI changes
    - Note any breaking changes
 
-Direct pushes to `main` may be blocked by branch protection. If that happens,
-push your branch and open a PR instead of trying to bypass the protection.
-
 7. **Address review feedback** promptly
+
+> **Merge strategy**: Squash merge is preferred for feature and fix branches to keep `main` history linear. See [docs/branch-protection.md](./docs/branch-protection.md) for the full merge and release discipline.
 
 ## Areas We Need Help
 
