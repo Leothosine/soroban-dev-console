@@ -67,8 +67,9 @@ jobs:
         uses: actions/cache@v4
         with:
           path: .turbo
-          key: ${{ runner.os }}-turbo-web-${{ hashFiles('package-lock.json', 'turbo.json') }}
+          key: ${{ runner.os }}-turbo-web-${{ hashFiles('apps/web/**', 'packages/ui/**', 'packages/soroban-utils/**', 'turbo.json', 'package-lock.json') }}
           restore-keys: |
+            ${{ runner.os }}-turbo-web-${{ hashFiles('turbo.json', 'package-lock.json') }}-
             ${{ runner.os }}-turbo-web-
 
       - name: Install dependencies
@@ -126,8 +127,10 @@ jobs:
         uses: actions/cache@v4
         with:
           path: .turbo
-          key: ${{ runner.os }}-turbo-packages-${{ matrix.workspace }}-${{ hashFiles('package-lock.json', 'turbo.json') }}
+          key: ${{ runner.os }}-turbo-packages-${{ matrix.workspace }}-${{ hashFiles('packages/**', 'turbo.json', 'package-lock.json') }}
           restore-keys: |
+            ${{ runner.os }}-turbo-packages-${{ matrix.workspace }}-${{ hashFiles('turbo.json', 'package-lock.json') }}-
+            ${{ runner.os }}-turbo-packages-${{ matrix.workspace }}-
             ${{ runner.os }}-turbo-packages-
 
       - name: Install dependencies
@@ -156,8 +159,9 @@ jobs:
         uses: actions/cache@v4
         with:
           path: .turbo
-          key: ${{ runner.os }}-turbo-api-${{ hashFiles('package-lock.json', 'turbo.json') }}
+          key: ${{ runner.os }}-turbo-api-${{ hashFiles('apps/api/**', 'packages/api-contracts/**', 'turbo.json', 'package-lock.json') }}
           restore-keys: |
+            ${{ runner.os }}-turbo-api-${{ hashFiles('turbo.json', 'package-lock.json') }}-
             ${{ runner.os }}-turbo-api-
 
       - name: Install dependencies
@@ -253,6 +257,15 @@ jobs:
           node-version: 20
           cache: "npm"
 
+      - name: Restore Turbo cache
+        uses: actions/cache@v4
+        with:
+          path: .turbo
+          key: ${{ runner.os }}-turbo-devops-${{ hashFiles('scripts/**', 'packages/api-contracts/src/runtime-defaults.ts', 'turbo.json', 'package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-turbo-devops-${{ hashFiles('turbo.json', 'package-lock.json') }}-
+            ${{ runner.os }}-turbo-devops-
+
       - name: Install dependencies
         run: npm ci
 
@@ -293,6 +306,49 @@ jobs:
             exit 1
           fi
           echo "✅ All required checks passed."
+  # DEVOPS-212: Wave-prep gate — runs the full release-readiness sequence.
+  # Only triggers on devops-relevant file changes or push to main.
+  wave-prep:
+    name: Wave Prep
+    needs: [changes, devops]
+    if: (needs.changes.outputs.devops == 'true' || github.event_name == 'push') && needs.devops.result == 'success'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: "npm"
+
+      - name: Restore Turbo cache
+        uses: actions/cache@v4
+        with:
+          path: .turbo
+          key: ${{ runner.os }}-turbo-wave-prep-${{ hashFiles('scripts/**', 'packages/api-contracts/src/runtime-defaults.ts', 'turbo.json', 'package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-turbo-wave-prep-${{ hashFiles('turbo.json', 'package-lock.json') }}-
+            ${{ runner.os }}-turbo-wave-prep-
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Verify build order
+        run: npx tsx scripts/verify-build-order.ts
+        continue-on-error: true
+
+      - name: Validate branch workflow
+        run: npx tsx scripts/validate-branch-workflow.ts
+
+      - name: Write wave-prep summary
+        if: always()
+        run: |
+          echo "## Wave Prep Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "All wave-prep checks completed. Review individual step results above." >> $GITHUB_STEP_SUMMARY
+
   # DEVOPS-201: Full-stack Wave integration gate.
   # Runs after all per-layer jobs and fails the PR if any layer regresses.
   wave-integration:

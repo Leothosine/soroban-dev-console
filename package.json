@@ -14,6 +14,8 @@
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",
     "check-drift": "tsx scripts/check-runtime-drift.ts",
     "check-integrity": "tsx scripts/check-dependency-integrity.ts",
+    "audit:ci": "turbo run audit --filter=web --filter=api",
+    "wave-prep": "npm run check-drift && npm run check-integrity && tsx scripts/verify-build-order.ts && tsx scripts/validate-branch-workflow.ts && tsx scripts/smoke-ssr-prerender.ts",
     "deploy:contracts": "bash scripts/deploy-test-suite.sh"
   },
   "devDependencies": {

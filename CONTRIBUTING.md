@@ -292,6 +292,18 @@ If a template doesn't fit, you can still open a regular issue with:
 - Environment details (OS, Node version, browser)
 - Screenshots if applicable
 
+## Governance
+
+This project follows a documented governance model covering issue scoping, CI budget monitoring, verification-sensitive flows, and fairness escalation during Stellar Wave windows.
+
+See [docs/governance.md](./docs/governance.md) for the full reference, including:
+
+- How to scope and size issues correctly
+- CI minute budget targets and how to diagnose overruns
+- Runbook for verification-sensitive flows (drift check, integrity check, migrations, wave-prep)
+- Fairness concerns and the appeals process
+- Maintainer checklist for wave windows
+
 ## Code of Conduct
 
 We are committed to providing a friendly, safe, and welcoming environment for all contributors. Please be respectful and inclusive in your interactions.
