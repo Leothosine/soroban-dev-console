@@ -1,47 +1,17 @@
 "use client";
 
-import { AppealTimeline, type AppealCase } from "@/components/appeal-timeline";
+import { Suspense } from "react";
+import { useSearchParams } from "next/navigation";
+import { AppealTimeline } from "@/components/appeal-timeline";
+import { getAppealFixture } from "@/lib/appeal-fixtures";
 
-// Placeholder — in production fetched from BE-208 appeal API
-const MOCK_APPEAL: AppealCase = {
-  id: "APL-001",
-  issueNumber: "42",
-  issueTitle: "Fix contract storage serialization",
-  submittedAt: "May 26, 2026",
-  currentStage: "ai_review",
-  outcome: null,
-  timeline: [
-    {
-      stage: "submitted",
-      label: "Appeal submitted",
-      timestamp: "May 26, 10:02",
-      status: "complete",
-    },
-    {
-      stage: "intake",
-      label: "Intake review",
-      timestamp: "May 26, 10:05",
-      note: "Evidence validated and queued for AI analysis.",
-      status: "complete",
-    },
-    {
-      stage: "ai_review",
-      label: "AI analysis",
-      note: "Reviewing submitted evidence against review history.",
-      status: "active",
-    },
-    {
-      stage: "human_review",
-      label: "Human review",
-      status: "pending",
-    },
-    {
-      stage: "decided",
-      label: "Decision",
-      status: "pending",
-    },
-  ],
-};
+function AppealStatusContent() {
+  const searchParams = useSearchParams();
+  const fixture = searchParams.get("fixture");
+  const appeal = getAppealFixture(fixture);
+
+  return <AppealTimeline appeal={appeal} />;
+}
 
 export default function AppealStatusPage() {
   return (
@@ -52,7 +22,15 @@ export default function AppealStatusPage() {
           Track the progress of your appeal through intake, review, and decision.
         </p>
       </div>
-      <AppealTimeline appeal={MOCK_APPEAL} />
+      <Suspense
+        fallback={
+          <div className="rounded-lg border bg-card p-5 text-sm text-muted-foreground">
+            Loading appeal status…
+          </div>
+        }
+      >
+        <AppealStatusContent />
+      </Suspense>
     </div>
   );
 }
