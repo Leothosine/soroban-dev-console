@@ -13,6 +13,7 @@
 #   drill    [--db <path>] [--out <dir>]   Full backup → restore → verify cycle
 #   list     [--out <dir>]                 List available backups
 #   prune    [--out <dir>] [--keep <n>]    Remove old backups, keep N most recent
+#   verify   [--db <path>]                 Quick integrity check for the active DB
 #
 # Environment variables (override defaults):
 #   DB_PATH   Path to the SQLite database file  (default: apps/api/prisma/dev.db)
@@ -325,6 +326,19 @@ cmd_prune() {
   ok "Pruning complete. $KEEP_COUNT backup(s) retained."
 }
 
+cmd_verify() {
+  require_sqlite3
+  check_db_exists "$DB_PATH"
+
+  info "Verifying database integrity: $DB_PATH"
+  if sqlite3 "$DB_PATH" "PRAGMA integrity_check;" | grep -q "^ok$"; then
+    ok "Database integrity check passed."
+  else
+    fail "Database integrity check FAILED."
+    exit 1
+  fi
+}
+
 # ── Dispatch ──────────────────────────────────────────────────────────────────
 case "$COMMAND" in
   backup)  cmd_backup  ;;
@@ -332,6 +346,7 @@ case "$COMMAND" in
   drill)   cmd_drill   ;;
   list)    cmd_list    ;;
   prune)   cmd_prune   ;;
+  verify)  cmd_verify  ;;
   *)
     echo "Usage: $0 <backup|restore|drill|list|prune> [options]"
     echo ""
@@ -341,6 +356,7 @@ case "$COMMAND" in
     echo "  drill    [--db <path>] [--out <dir>]   Full backup→restore→verify cycle"
     echo "  list     [--out <dir>]                 List available backups"
     echo "  prune    [--out <dir>] [--keep <n>]    Remove old backups"
+    echo "  verify   [--db <path>]                 Quick integrity check for the active DB"
     echo ""
     echo "Environment variables:"
     echo "  DB_PATH     Path to SQLite database (default: apps/api/prisma/dev.db)"
