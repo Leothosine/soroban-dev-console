@@ -15,8 +15,30 @@ import {
 } from "@nestjs/common";
 import type { Request, Response } from "express";
 
-const WINDOW_MS = 60_000;         // 1 minute
-const MAX_CREATES_PER_WINDOW = 5; // max new tickets per owner key per window
+const DEFAULT_WINDOW_MS = 60_000; // 1 minute
+const DEFAULT_MAX_CREATES_PER_WINDOW = 5; // max new tickets per owner key per window
+
+export function readThrottleConfig() {
+  const parsedWindow = Number.parseInt(
+    process.env.SUPPORT_TICKET_WINDOW_MS ?? "",
+    10,
+  );
+  const parsedLimit = Number.parseInt(
+    process.env.SUPPORT_TICKET_MAX_CREATES_PER_WINDOW ?? "",
+    10,
+  );
+
+  return {
+    windowMs:
+      Number.isFinite(parsedWindow) && parsedWindow > 0
+        ? parsedWindow
+        : DEFAULT_WINDOW_MS,
+    maxCreatesPerWindow:
+      Number.isFinite(parsedLimit) && parsedLimit > 0
+        ? parsedLimit
+        : DEFAULT_MAX_CREATES_PER_WINDOW,
+  };
+}
 
 type Bucket = { count: number; resetAt: number };
 
@@ -27,6 +49,7 @@ export class SupportTicketThrottleGuard implements CanActivate {
   canActivate(context: ExecutionContext): boolean {
     const http = context.switchToHttp();
     const req = http.getRequest<Request & { ownerKey?: string }>();
+    const { windowMs, maxCreatesPerWindow } = readThrottleConfig();
 
     // Only throttle creation requests
     if (req.method !== "POST") return true;
@@ -36,11 +59,11 @@ export class SupportTicketThrottleGuard implements CanActivate {
     const bucket = this.buckets.get(key);
 
     if (!bucket || now >= bucket.resetAt) {
-      this.buckets.set(key, { count: 1, resetAt: now + WINDOW_MS });
+      this.buckets.set(key, { count: 1, resetAt: now + windowMs });
       return true;
     }
 
-    if (bucket.count >= MAX_CREATES_PER_WINDOW) {
+    if (bucket.count >= maxCreatesPerWindow) {
       const retryAfter = Math.max(1, Math.ceil((bucket.resetAt - now) / 1000));
       http.getResponse<Response>().setHeader("Retry-After", String(retryAfter));
       throw new HttpException(
