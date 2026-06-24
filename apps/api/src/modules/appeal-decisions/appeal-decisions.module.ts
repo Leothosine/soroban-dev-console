@@ -4,10 +4,11 @@ import { AuditService } from "../../lib/audit.service.js";
 import { AppealDecisionsController } from "./appeal-decisions.controller.js";
 import { AppealDecisionsService } from "./appeal-decisions.service.js";
 import { AppealDecisionsRepository } from "./appeal-decisions.repository.js";
+import { ShadowModeService } from "./shadow-mode.service.js";
 
 @Module({
   controllers: [AppealDecisionsController],
-  providers: [AppealDecisionsService, AppealDecisionsRepository, PrismaService, AuditService],
-  exports: [AppealDecisionsService],
+  providers: [AppealDecisionsService, AppealDecisionsRepository, PrismaService, AuditService, ShadowModeService],
+  exports: [AppealDecisionsService, ShadowModeService],
 })
 export class AppealDecisionsModule {}
