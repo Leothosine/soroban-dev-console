@@ -446,3 +446,16 @@ model AiMetricSnapshot {
   @@map("ai_metric_snapshots")
 }
 
+
+/// AI-932: Onboarding digest for a new contributor.
+model OnboardingDigest {
+  id             String   @id @default(cuid())
+  contributorKey String   @unique @map("contributor_key")
+  sections       Json
+  digestText     String   @map("digest_text")
+  modelVersion   String   @map("model_version")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  @@index([contributorKey])
+  @@map("onboarding_digests")
+}
