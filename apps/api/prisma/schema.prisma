@@ -447,15 +447,18 @@ model AiMetricSnapshot {
 }
 
 
-/// AI-928: Fixture synthesis suggestions for a test context.
-model FixtureSynthesisResult {
+/// AI-921: Cluster of related issues for maintainer triage.
+model IssueCluster {
   id           String   @id @default(cuid())
-  contextId    String   @unique @map("context_id")
-  targetFlows  Json     @map("target_flows")
-  suggestions  Json
+  clusterKey   String   @unique @map("cluster_key")
+  label        String
+  issueRefs    Json     @map("issue_refs")
+  theme        String
+  confidence   Float
   modelVersion String   @map("model_version")
   createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
 
-  @@index([contextId])
-  @@map("fixture_synthesis_results")
+  @@index([clusterKey])
+  @@map("issue_clusters")
 }
