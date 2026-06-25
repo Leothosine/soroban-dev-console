@@ -446,3 +446,18 @@ model AiMetricSnapshot {
   @@map("ai_metric_snapshots")
 }
 
+/// AI-935: Reusable feedback tagging batch record.
+model FeedbackTagBatch {
+  id               String   @id @default(cuid())
+  batchId          String   @unique @map("batch_id")
+  itemCount        Int      @map("item_count")
+  taggedItems      Json     @map("tagged_items")
+  tagSummary       Json     @map("tag_summary")
+  needsReviewCount Int      @default(0) @map("needs_review_count")
+  modelVersion     String   @map("model_version")
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  @@map("feedback_tag_batches")
+}
+
