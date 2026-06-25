@@ -446,3 +446,20 @@ model AiMetricSnapshot {
   @@map("ai_metric_snapshots")
 }
 
+
+/// AI-923: Structured summary of a CI run failure for faster triage.
+model CiFailureSummary {
+  id            String   @id @default(cuid())
+  runId         String   @unique @map("run_id")
+  repository    String
+  branch        String
+  failedSteps   Json     @map("failed_steps")
+  affectedFiles Json     @map("affected_files")
+  likelyCauses  Json     @map("likely_causes")
+  nextActions   Json     @map("next_actions")
+  modelVersion  String   @map("model_version")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  @@index([runId])
+  @@map("ci_failure_summaries")
+}
