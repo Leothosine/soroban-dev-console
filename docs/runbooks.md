@@ -209,6 +209,97 @@ npm run test:run -w web
 
 ---
 
+### RB-008: Auth Incident — Owner Key Compromise (P1)
+
+**Trigger:** Suspicious activity detected on a workspace, or owner key reported as compromised.
+
+**Diagnosis:**
+1. Check audit logs for the affected workspace: `audit_logs` table filtered by `resourceId`.
+2. Look for repeated `UnauthorizedException` patterns from `owner-key.guard.ts`.
+3. Verify if the key matches common patterns (short, whitespace, or forbidden).
+
+**Resolution:**
+1. Immediately revoke the compromised key by generating a new owner key.
+2. Update the workspace record with the new key hash.
+3. Review audit logs for any unauthorized mutations.
+4. If data was tampered with, restore from the most recent backup.
+5. File a post-incident report with timeline and affected resources.
+
+**Prevention:**
+- Enforce minimum key length of 16 characters in production.
+- Enable key rotation every 90 days.
+- Monitor for brute-force patterns via rate-limit service.
+
+---
+
+### RB-009: Webhook Security Incident (P1)
+
+**Trigger:** Repeated webhook signature failures, or a webhook replay attack detected.
+
+**Diagnosis:**
+1. Check webhook signature logs for `UnauthorizedException` messages.
+2. Verify the `WEBHOOK_SECRET` has not been rotated without notice.
+3. Check `webhook-replay.service.ts` for duplicate webhook IDs.
+
+**Resolution:**
+1. If webhook secret was rotated → coordinate with the provider for the new secret.
+2. If replay attack detected → revoke the affected webhook ID and regenerate.
+3. Review recent webhook deliveries for any unauthorized actions.
+4. Update the webhook endpoint to enforce strict replay protection.
+5. Rotate the webhook secret if there is any sign of compromise.
+
+**Prevention:**
+- Use unique webhook IDs for each delivery event.
+- Set up webhook secret rotation schedule.
+- Monitor webhook failure rate alerts.
+
+---
+
+### RB-010: Supply-Chain Build Input Compromise (P1)
+
+**Trigger:** Build manifest hash mismatch or unexpected build input modification.
+
+**Diagnosis:**
+1. Compare `build-manifest.json` hashes against the actual file contents.
+2. Check git history for unauthorized changes to build input files.
+3. Verify CI pipeline integrity for tampered steps.
+
+**Resolution:**
+1. If manifest mismatch detected → identify which files were modified.
+2. Revert unauthorized changes to build inputs.
+3. Regenerate the build manifest with correct hashes.
+4. Review CI job logs for signs of pipeline tampering.
+5. Consider rebuilding from a known-good commit.
+
+**Prevention:**
+- All build inputs must be tracked in the build manifest.
+- CI must verify manifest integrity before proceeding with builds.
+- Restrict write access to build configuration files.
+
+---
+
+### RB-011: Rate Limit Abuse or DoS Attempt (P2)
+
+**Trigger:** A single client triggers repeated rate limit violations across multiple endpoints.
+
+**Diagnosis:**
+1. Check rate-limit service logs for repeated `TOO_MANY_REQUESTS` from the same identifier.
+2. Identify the affected endpoints and time windows.
+3. Check if the traffic pattern is organic (bot) or targeted (DoS).
+
+**Resolution:**
+1. Block the offending IP or key at the infrastructure level (WAF / firewall).
+2. If legitimate traffic is being rate-limited, adjust the `THROTTLE_POLICIES` config.
+3. For DoS patterns, engage DDoS protection (Cloudflare, AWS Shield).
+4. Review and tighten rate limits on the most abuse-prone endpoints.
+
+**Prevention:**
+- Tiered rate limiting: stricter limits for auth/creation endpoints.
+- Use IP-based + user-based rate limiting simultaneously.
+- Monitor for rate limit violation patterns in dashboards.
+
+---
+
 ## Post-Incident Process
 
 After any P1 or P2 incident:
